@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="file-caching-olleli", # Replace with your own username
+    name="file_caching", # Replace with your own username
     version="0.0.1",
     author="Olle Lindgren",
     author_email="lindgrenolle@live.se",
