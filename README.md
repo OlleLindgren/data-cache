@@ -8,6 +8,7 @@ Not guaranteed to be stable between versions, and hence not intended for long-te
 python>=3.6
 pandas
 pyarrow
+termcolor
 ```
 
 ## Install

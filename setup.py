@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="file-caching", # Replace with your own username
-    version="0.0.1",
+    version="0.2",
     author="Olle Lindgren",
     author_email="lindgrenolle@live.se",
     description="A package for caching files locally",
