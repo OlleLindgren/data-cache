@@ -15,8 +15,6 @@ pyarrow
 
 ## Usage: Caching .csv and .tsv-files
 
-`pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (range) indexes will not work, and column datatypes are somewhat restricted.
-
 ```
 import dfcache as cch
 
@@ -32,3 +30,5 @@ df = cch.read(filename)
 # Write df (pandas.DataFrame instance) to cache
 cch.write(df, filename)
 ```
+
+`pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (range) indexes will not work, and column datatypes are somewhat restricted.
