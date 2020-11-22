@@ -12,7 +12,7 @@ termcolor
 ```
 
 ## Install
-`pip install git+https://github.com/OlleLindgren/file-caching@v0.2`
+`pip install git+https://github.com/OlleLindgren/file-caching@v0.2.1`
 
 ## Usage: Caching .csv and .tsv-files
 
