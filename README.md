@@ -1,7 +1,7 @@
 # file-caching
 Repository for caching .csv files as .feather, making load times much faster (usually around 10x compared to .csv) on subsequent runs.
 
-Not stable between versions. Dependent on pyarrow, which is also not stable between versions.
+Not guaranteed to be stable between versions. Dependent on pyarrow, which is also not guaranteed to be stable between versions.
 
 ## Install
 `pip install git+https://github.com/OlleLindgren/file-caching@v0.1.2`
