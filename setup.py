@@ -4,14 +4,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="file-caching", # Replace with your own username
+    name="data-cache",
     version="v0.3",
     author="Olle Lindgren",
     author_email="lindgrenolle@live.se",
     description="A package for caching files locally",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/OlleLindgren/file-caching",
+    url="https://github.com/OlleLindgren/data-cache",
     packages=setuptools.find_packages(),
     install_requires=[
           'pandas',
