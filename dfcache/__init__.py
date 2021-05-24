@@ -1,1 +1,1 @@
-from .caching import read, write, read_cache, cache_folder
+from .caching import read, write, cache_folder, cache_files, is_cached
