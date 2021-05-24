@@ -74,5 +74,5 @@ def cache_folder(folder: str, extensions: Iterable[str]=('.tsv', '.csv'), recurs
 
 def write(df: pd.DataFrame, filename: str, **kwargs) -> None:
     _, extension = os.path.splitext(filename)
-    assert extension == '.feather'
+    assert extension == '.feather', "File extension must be .feather"
     df.to_feather(filename, **kwargs)
