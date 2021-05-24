@@ -3,17 +3,16 @@ import pandas as pd
 import os
 from pathlib import Path
 
+CACHE_ROOT = '.data-cache'
+
 def __get_cache_filename(filename: str) -> str:
     
-    filedir, extension = os.path.splitext(filename)
+    basename, extension = os.path.splitext(filename)
 
     if extension == '.feather':
-        return filename
+        return os.path.join(CACHE_ROOT, filename)
 
-    folder, _filename = os.path.split(filedir)
-
-    cache_folder = folder[:4] + '_cache' + folder[4:]
-    return os.path.join(cache_folder, _filename+'.feather')
+    return os.path.join(CACHE_ROOT, basename+'.feather')
 
 def is_cached(filename: str) -> bool:
     feather_filename = __get_cache_filename(filename)
@@ -75,4 +74,4 @@ def cache_folder(folder: str, extensions: Iterable[str]=('.tsv', '.csv'), recurs
 def write(df: pd.DataFrame, filename: str, **kwargs) -> None:
     _, extension = os.path.splitext(filename)
     assert extension == '.feather', "File extension must be .feather"
-    df.to_feather(filename, **kwargs)
+    df.to_feather(os.path.join(CACHE_ROOT, filename), **kwargs)
