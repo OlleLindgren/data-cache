@@ -5,14 +5,14 @@ from pathlib import Path
 
 def __get_cache_filename(filename: str) -> str:
     
-    _filedir, extension = os.path.splitext(filename)
+    filedir, extension = os.path.splitext(filename)
 
     if extension == '.feather':
         return filename
 
-    _folder, _filename = os.path.split(_filedir)
+    folder, _filename = os.path.split(filedir)
 
-    cache_folder = _folder[:4] + '_cache' + _folder[4:]
+    cache_folder = folder[:4] + '_cache' + folder[4:]
     return os.path.join(cache_folder, _filename+'.feather')
 
 def is_cached(filename: str) -> bool:
@@ -42,21 +42,33 @@ def read(filename: str, **kwargs) -> pd.DataFrame:
         return result
 
 def cache_files(filenames: Iterable[str], **kwargs) -> int:
-    _n_caches = 0
+    n_caches = 0
     for filename in filenames:
         if not is_cached(filename):
             read(filename, **kwargs)
-            _n_caches += 1
-    return _n_caches
+            n_caches += 1
+    return n_caches
     
 def cache_folder(folder: str, extensions: Iterable[str]=('.tsv', '.csv'), recursive: bool=True, **kwargs) -> int:
+    filter = lambda filename: os.path.splitext(filename)[1] in extensions and not is_cached(filename)
+    
+    if recursive:
+        def make_recursive_iterator():
+            for root, _, files in os.walk(folder):
+                for f in files:
+                    yield os.path.join(root, f)
+        file_iterator = make_recursive_iterator()
+    else:
+        file_iterator = (fn for fn in os.listdir(folder) if filter(fn))
+        
     filenames = (
-        fn for fn in (os.walk if recursive else os.listdir)(folder) 
-        if (
-            os.path.splitext(fn)[1] in extensions
-            and not is_cached(fn)))
-    _n_caches = cache_files(filenames, **kwargs)
-    return _n_caches
+        fn
+        for fn in file_iterator
+        if filter(fn))
+    
+    n_caches = cache_files(filenames, **kwargs)
+
+    return n_caches
 
 def write(df: pd.DataFrame, filename: str, **kwargs) -> None:
     _, extension = os.path.splitext(filename)
