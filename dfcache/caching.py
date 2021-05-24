@@ -37,7 +37,9 @@ def read(filename: str, **kwargs) -> pd.DataFrame:
         expected_shape = result.shape
         result.to_feather(feather_filename)
         result = pd.read_feather(feather_filename)
-        assert result.shape == expected_shape
+        if result.shape != expected_shape:
+            os.remove(expected_shape)
+            assert result.shape == expected_shape, f"DataFrame shape from read_feather is different to read_csv: {result.shape} != {expected_shape}. \nCaching of {filename} at {feather_filename} failed."
 
         return result
 
