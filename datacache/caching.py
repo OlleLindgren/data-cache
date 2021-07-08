@@ -3,42 +3,70 @@ import pandas as pd
 import os
 from pathlib import Path
 
-CACHE_ROOT = '.data-cache'
+class __setttings_handler:
+    __cache_root: str = '.data-cache'
+    @classmethod
+    def get_cache_root(cls):
+        return cls.__cache_root
+    @classmethod
+    def set_cache_root(cls, cache_root):
+        cls.__cache_root=cache_root
 
-def __get_cache_filename(filename: str) -> str:
+set_cache_root = __setttings_handler.set_cache_root
+get_cache_root = __setttings_handler.get_cache_root
+
+import platform
+if platform.uname().machine=='arm64':
+    CACHE_FORMAT = '.pickle'
+    print(f'Cache uses .pickle for {platform.uname().machine} systems, since .feather is not supported by pyarrow.')
+    print('Caching with .pickle is significantly slower than .feather')
+else:
+    CACHE_FORMAT = '.feather'
+
+def __get_cache_filepath(filename: str) -> str:
     
     basename, extension = os.path.splitext(filename)
+    if os.path.isabs(filename):
+        common_root = os.path.commonpath([get_cache_root(), filename])
+    else:
+        common_root = get_cache_root()
+    
+    rel_filepath = os.path.relpath(basename+CACHE_FORMAT, start=common_root)
 
-    if extension == '.feather':
-        return os.path.join(CACHE_ROOT, filename)
-
-    return os.path.join(CACHE_ROOT, basename+'.feather')
+    return os.path.join(get_cache_root(), rel_filepath)
 
 def is_cached(filename: str) -> bool:
-    feather_filename = __get_cache_filename(filename)
-    return os.path.isfile(feather_filename)
+    cache_filename = __get_cache_filepath(filename)
+    return os.path.isfile(cache_filename)
 
 def read(filename: str, **kwargs) -> pd.DataFrame:
 
-    feather_filename = __get_cache_filename(filename)
-    cache_folder, _ = os.path.split(feather_filename)
+    cache_filename = __get_cache_filepath(filename)
+    cache_folder, _ = os.path.split(cache_filename)
 
     if not os.path.isdir(cache_folder):
         # Make cache folder
         Path(cache_folder).mkdir(parents=True, exist_ok=True)
 
     # If file already in feather format, return file.
-    if os.path.isfile(feather_filename):
-        return pd.read_feather(feather_filename)
+    if os.path.isfile(cache_filename):
+        if CACHE_FORMAT=='.feather':
+            return pd.read_feather(cache_filename)
+        else:
+            return pd.read_pickle(cache_filename)
     else:
         # Read csv, write cache, read cache
         result = pd.read_csv(filename, **kwargs)
         expected_shape = result.shape
-        result.to_feather(feather_filename)
-        result = pd.read_feather(feather_filename)
+        if CACHE_FORMAT=='.feather':
+            result.to_feather(cache_filename)
+            result = pd.read_feather(cache_filename)
+        else:
+            result.to_pickle(cache_filename)
+            result = pd.read_pickle(cache_filename)
         if result.shape != expected_shape:
             os.remove(expected_shape)
-            assert result.shape == expected_shape, f"DataFrame shape from read_feather is different to read_csv: {result.shape} != {expected_shape}. \nCaching of {filename} at {feather_filename} failed."
+            assert result.shape == expected_shape, f"DataFrame shape from cache read is different to read_csv: {result.shape} != {expected_shape}. \nCaching of {filename} at {cache_filename} failed."
 
         return result
 
@@ -72,6 +100,8 @@ def cache_folder(folder: str, extensions: Iterable[str]=('.tsv', '.csv'), recurs
     return n_caches
 
 def write(df: pd.DataFrame, filename: str, **kwargs) -> None:
-    _, extension = os.path.splitext(filename)
-    assert extension == '.feather', "File extension must be .feather"
-    df.to_feather(os.path.join(CACHE_ROOT, filename), **kwargs)
+    _cache_filename = __get_cache_filepath(filename)
+    if CACHE_FORMAT=='.feather':
+        df.to_feather(_cache_filename, **kwargs)
+    else:
+        df.to_pickle(_cache_filename, **kwargs)
