@@ -4,7 +4,7 @@ Repository with a few small helper functions for caching .csv files in the binar
 
 Not guaranteed to be stable between versions, and hence not intended for long-term storage.
 
-Cache files are stored in the CACHE_ROOT directory (.data-cache by default).
+There is an internal cache root, where cached files are stored (.data-cache by default). View the code example below for how to change that.
 
 ## Dependencies
 
@@ -12,17 +12,21 @@ Cache files are stored in the CACHE_ROOT directory (.data-cache by default).
 python>=3.6
 pandas
 pyarrow
-termcolor
 ```
+
+The package will work without `pyarrow`, but installing it is strongly recommended. In future versions, when `pyarrow` is supported for the arm64 Apple Silicon Macs, this dependency will become non-optional.
 
 ## Install
 
-`pip install git+https://github.com/OlleLindgren/data-cache@v0.3`
+`pip install git+https://github.com/OlleLindgren/data-cache@v0.4`
 
 ## Usage: Caching .csv files
 
 ```python
 import datacache as cache
+
+# Manually set directory for caches (not necessary)
+cache.set_cache_root('/tmp/some-caching-directory')
 
 # Recursively cache all csv files in directory and sub-directories
 cache.cache_folder(directory)
