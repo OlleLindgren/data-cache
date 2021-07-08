@@ -1,6 +1,7 @@
+import os
+import warnings
 from typing import Iterable
 import pandas as pd 
-import os
 from pathlib import Path
 
 class __setttings_handler:
@@ -15,13 +16,17 @@ class __setttings_handler:
 set_cache_root = __setttings_handler.set_cache_root
 get_cache_root = __setttings_handler.get_cache_root
 
-import platform
-if platform.uname().machine=='arm64':
-    CACHE_FORMAT = '.pickle'
-    print(f'Cache uses .pickle for {platform.uname().machine} systems, since .feather is not supported by pyarrow.')
-    print('Caching with .pickle is significantly slower than .feather')
-else:
+try:
+    # If pyarrow available, write as feather
+    import pyarrow
     CACHE_FORMAT = '.feather'
+except ImportError:
+    CACHE_FORMAT = '.pickle'
+    warnings.warn((
+        'pyarrow does not seem to be available, falling back to caching with pickle. '
+        'Installing pyarrow is strongly recommended, and will non-optional '
+        'in future versions when it is supported on the M1 macs'
+    ))
 
 def __get_cache_filepath(filename: str) -> str:
     
