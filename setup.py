@@ -7,7 +7,7 @@ requirements=['pandas']
 
 setuptools.setup(
     name="data-cache",
-    version="v0.4",
+    version="v0.4.1",
     author="Olle Lindgren",
     author_email="lindgrenolle@live.se",
     description="A package for caching files locally",
