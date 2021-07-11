@@ -8,7 +8,7 @@ class __setttings_handler:
     __cache_root: str = '.data-cache'
     @classmethod
     def get_cache_root(cls):
-        return cls.__cache_root
+        return os.path.abspath(cls.__cache_root)
     @classmethod
     def set_cache_root(cls, cache_root):
         cls.__cache_root=cache_root
@@ -105,7 +105,13 @@ def cache_folder(folder: str, extensions: Iterable[str]=('.tsv', '.csv'), recurs
     return n_caches
 
 def write(df: pd.DataFrame, filename: str, **kwargs) -> None:
+    # Figure out filename
     _cache_filename = __get_cache_filepath(filename)
+    _cache_folder = Path(_cache_filename).parent
+    # If filename parent directory doesn't exist, create it
+    if not os.path.isdir(_cache_folder):
+        os.makedirs(_cache_folder)
+    # Write cache
     if CACHE_FORMAT=='.feather':
         df.to_feather(_cache_filename, **kwargs)
     else:
