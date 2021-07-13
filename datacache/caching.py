@@ -24,7 +24,7 @@ except ImportError:
     CACHE_FORMAT = '.pickle'
     warnings.warn((
         'pyarrow does not seem to be available, falling back to caching with pickle. '
-        'Installing pyarrow is strongly recommended, and will non-optional '
+        'Installing pyarrow is strongly recommended, and will become non-optional '
         'in future versions when it is supported on the M1 macs'
     ))
 
@@ -39,6 +39,20 @@ def __get_cache_filepath(filename: str) -> str:
     rel_filepath = os.path.relpath(basename+CACHE_FORMAT, start=common_root)
 
     return os.path.join(get_cache_root(), rel_filepath)
+
+def dir(path: str) -> Path:
+    # Get equivalent directory in cache
+    _, filename = os.path.split(path)
+    if filename:
+        # If file
+        return Path(__get_cache_filepath(path)).parent
+    else:
+        # If directory
+        return Path(__get_cache_filepath(os.path.join(path, 'tmp'))).parent
+
+def file(path: str) -> Path:
+    # Get equivalent file in cache
+    return Path(__get_cache_filepath(path))
 
 def is_cached(filename: str) -> bool:
     cache_filename = __get_cache_filepath(filename)
