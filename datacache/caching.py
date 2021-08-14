@@ -3,6 +3,7 @@ import warnings
 from typing import Iterable
 import pandas as pd 
 from pathlib import Path
+from pathvalidate import sanitize_filepath
 
 class __setttings_handler:
     __cache_root: str = '.data-cache'
@@ -28,7 +29,7 @@ except ImportError:
         'in future versions when it is supported on the M1 macs'
     ))
 
-def __get_cache_filepath(filename: str) -> str:
+def __get_cache_filepath(filename: str) -> Path:
     
     basename, extension = os.path.splitext(filename)
     if os.path.isabs(filename):
@@ -38,21 +39,23 @@ def __get_cache_filepath(filename: str) -> str:
     
     rel_filepath = os.path.relpath(basename+CACHE_FORMAT, start=common_root)
 
-    return os.path.join(get_cache_root(), rel_filepath)
+    result = os.path.join(get_cache_root(), rel_filepath)
+
+    return Path(sanitize_filepath(result, platform='auto'))
 
 def dir(path: str) -> Path:
     # Get equivalent directory in cache
     _, filename = os.path.split(path)
     if filename:
         # If file
-        return Path(__get_cache_filepath(path)).parent
+        return __get_cache_filepath(path).parent
     else:
         # If directory
-        return Path(__get_cache_filepath(os.path.join(path, 'tmp'))).parent
+        return __get_cache_filepath(os.path.join(path, 'tmp')).parent
 
 def file(path: str) -> Path:
     # Get equivalent file in cache
-    return Path(__get_cache_filepath(path))
+    return __get_cache_filepath(path)
 
 def is_cached(filename: str) -> bool:
     cache_filename = __get_cache_filepath(filename)
@@ -61,11 +64,11 @@ def is_cached(filename: str) -> bool:
 def read(filename: str, **kwargs) -> pd.DataFrame:
 
     cache_filename = __get_cache_filepath(filename)
-    cache_folder, _ = os.path.split(cache_filename)
+    cache_folder = cache_filename.parent
 
     if not os.path.isdir(cache_folder):
         # Make cache folder
-        Path(cache_folder).mkdir(parents=True, exist_ok=True)
+        cache_folder.mkdir(parents=True, exist_ok=True)
 
     # If file already in feather format, return file.
     if os.path.isfile(cache_filename):

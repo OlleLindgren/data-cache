@@ -1,9 +1,11 @@
 import setuptools
+import os
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-requirements=['pandas']
+with open(os.path.join(__file__, '..', 'requirements.txt'), 'r') as f:
+    requirements = [r.strip() for r in f.readlines() if r.strip()]
 
 setuptools.setup(
     name="data-cache",
@@ -15,8 +17,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/OlleLindgren/data-cache",
     packages=setuptools.find_packages(),
-    install_requires=["pandas"],
-    extras_require={"way-faster-caching": ["pyarrow"]},
+    install_requires=requirements,
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
