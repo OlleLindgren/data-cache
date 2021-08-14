@@ -9,7 +9,7 @@ with open(os.path.join(__file__, '..', 'requirements.txt'), 'r') as f:
 
 setuptools.setup(
     name="data-cache",
-    version="v0.5.1",
+    version="v0.6",
     author="Olle Lindgren",
     author_email="lindgrenolle@live.se",
     description="A package for caching files locally",
