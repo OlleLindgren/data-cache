@@ -18,7 +18,7 @@ The package will work without `pyarrow`, but installing it is strongly recommend
 
 ## Install
 
-`pip install git+https://github.com/OlleLindgren/data-cache@v0.5`
+`pip install git+https://github.com/OlleLindgren/data-cache@v0.5.1`
 
 ## Usage: Caching .csv files
 
