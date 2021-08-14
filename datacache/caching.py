@@ -17,18 +17,6 @@ class __setttings_handler:
 set_cache_root = __setttings_handler.set_cache_root
 get_cache_root = __setttings_handler.get_cache_root
 
-try:
-    # If pyarrow available, write as feather
-    import pyarrow
-    CACHE_FORMAT = '.feather'
-except ImportError:
-    CACHE_FORMAT = '.pickle'
-    warnings.warn((
-        'pyarrow does not seem to be available, falling back to caching with pickle. '
-        'Installing pyarrow is strongly recommended, and will become non-optional '
-        'in future versions when it is supported on the M1 macs'
-    ))
-
 def __get_cache_filepath(filename: str) -> Path:
     
     basename, extension = os.path.splitext(filename)
@@ -37,7 +25,7 @@ def __get_cache_filepath(filename: str) -> Path:
     else:
         common_root = get_cache_root()
     
-    rel_filepath = os.path.relpath(basename+CACHE_FORMAT, start=common_root)
+    rel_filepath = os.path.relpath(basename+'.feather', start=common_root)
 
     result = os.path.join(get_cache_root(), rel_filepath)
 
@@ -72,23 +60,21 @@ def read(filename: str, **kwargs) -> pd.DataFrame:
 
     # If file already in feather format, return file.
     if os.path.isfile(cache_filename):
-        if CACHE_FORMAT=='.feather':
-            return pd.read_feather(cache_filename)
-        else:
-            return pd.read_pickle(cache_filename)
+        return pd.read_feather(cache_filename)
     else:
         # Read csv, write cache, read cache
         result = pd.read_csv(filename, **kwargs)
         expected_shape = result.shape
-        if CACHE_FORMAT=='.feather':
-            result.to_feather(cache_filename)
-            result = pd.read_feather(cache_filename)
-        else:
-            result.to_pickle(cache_filename)
-            result = pd.read_pickle(cache_filename)
+
+        result.to_feather(cache_filename)
+        result = pd.read_feather(cache_filename)
+
         if result.shape != expected_shape:
             os.remove(expected_shape)
-            assert result.shape == expected_shape, f"DataFrame shape from cache read is different to read_csv: {result.shape} != {expected_shape}. \nCaching of {filename} at {cache_filename} failed."
+            assert result.shape == expected_shape, \
+                "DataFrame shape from cache read is different to read_csv: " \
+                f"{result.shape} != {expected_shape}. \n " \
+                f"Caching of {filename} at {cache_filename} failed."
 
         return result
 
@@ -129,7 +115,4 @@ def write(df: pd.DataFrame, filename: str, **kwargs) -> None:
     if not os.path.isdir(_cache_folder):
         os.makedirs(_cache_folder)
     # Write cache
-    if CACHE_FORMAT=='.feather':
-        df.to_feather(_cache_filename, **kwargs)
-    else:
-        df.to_pickle(_cache_filename, **kwargs)
+    df.to_feather(_cache_filename, **kwargs)
