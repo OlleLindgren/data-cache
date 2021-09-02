@@ -6,26 +6,29 @@ Not guaranteed to be stable between versions, and hence not intended for long-te
 
 There is an internal cache root, where cached files are stored (.data-cache by default). View the code example below for how to change that.
 
+It is also possible to cache functions in ram, with the `mem_cache` function/decorator.
+
 ## Dependencies
 
 ```
-python>=3.6
+python>=3.8
 pandas
 pyarrow
 ```
 
-The package will work without `pyarrow`, but installing it is strongly recommended. In future versions, when `pyarrow` is supported for the arm64 Apple Silicon Macs, this dependency will become non-optional.
-
 ## Install
 
-`pip install git+https://github.com/OlleLindgren/data-cache@v0.6`
+`pip install git+https://github.com/OlleLindgren/data-cache@v0.7`
 
-## Usage: Caching .csv files
+## Usage: As a stand-in for pd.read_csv
+
+This is useful when the same .csv file will be loaded multiple times, across different Python sessions.
 
 ```python
 import datacache as cache
 
 # Manually set directory for caches (not necessary)
+# The cache root may also be set using the CACHE_ROOT environment variable.
 cache.set_cache_root('/tmp/some-caching-directory')
 
 # Recursively cache all csv files in directory and sub-directories
@@ -43,4 +46,30 @@ df = cache.read(filename)
 cache.write(df, filename)
 ```
 
-`pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (range) indexes will not work, and column datatypes are restricted to the native C datatypes. This is normally not a problem for numeric data.
+## Usage: Caching to RAM
+
+This is useful if the same function will be re-called multiple times with the same arguments.
+
+```python
+# Same as cache.read, but caches the result in RAM.
+# If the underlying .feather object updates (gets a different modification time),
+# this will reload.
+df = cache.mem_read(filename)
+
+# Cache any function in RAM
+df = cache.mem_cache(pd.read_csv)(filename)
+
+import random
+@cache.mem_cache
+def get_random_number(x: float):
+    return random.random() * x
+
+# The same as long as the arguments are the same
+print(get_random_number(1.0))  # x
+print(get_random_number(1.0))  # x
+print(get_random_number(-1.0))  # y
+print(get_random_number(-1.0))  # y
+print(get_random_number(1.0))  # x
+```
+
+`pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (range) indexes will not work, and column datatypes are restricted to the native C datatypes. For these reasons, it is recommended to fully replace `pd.read_csv()` with `cache.read()`.
