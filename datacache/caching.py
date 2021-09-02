@@ -1,8 +1,12 @@
+from functools import wraps
 import os
-from typing import Iterable
+from typing import Callable, Iterable
 import pandas as pd 
 from pathlib import Path
 from pathvalidate import sanitize_filepath
+
+import time
+HASH_KEY: str = f"__##__{hash(time.time())}__%%__"
 
 class __setttings_handler:
     __cache_root: str = os.getenv('CACHE_ROOT', '.data-cache')
@@ -92,7 +96,19 @@ def read(filename: str, **kwargs) -> pd.DataFrame:
 
         return result
 
-def ram_read(filename: str, **kwargs) -> pd.DataFrame:
+def fingerprint(*args, **kwargs) -> int:
+    """Return an integer fingerprint of arguments"""
+
+    _args = list(args)
+    _args.extend(kwargs.keys())
+    _args.extend(kwargs.values())
+
+    _args = map(str, _args)
+    result = hash(HASH_KEY.join(_args))
+
+    return result
+
+def mem_read(filename: str, **kwargs) -> pd.DataFrame:
     """Read filename, cache result in memory."""
     
     # Get filename that will be read by read()
@@ -100,16 +116,13 @@ def ram_read(filename: str, **kwargs) -> pd.DataFrame:
     read_filename = cache_filename if os.path.isfile(cache_filename) else filename
 
     # Get fingerprint based on arguments.
-    __fingerprint = hash(
-        str(Path(filename).absolute()) + 
-        ''.join(sorted(kwargs.keys())) + 
-        ''.join(sorted(kwargs.values())))
+    __fingerprint = fingerprint(filename, **kwargs)
 
     # Get modification time.
     mod_time = os.path.getmtime(read_filename)
 
     if (cached_result := __setttings_handler.get_mem_cache().get(__fingerprint)) and \
-            cached_result["mtime"] == mod_time:
+            cached_result.get("mtime") == mod_time:
         # If result in cache, and recorded modification time matches
         #  read file modification time, return memory cache
         return cached_result["data"]
@@ -121,6 +134,22 @@ def ram_read(filename: str, **kwargs) -> pd.DataFrame:
             "data": result
         }
         return result
+
+def mem_cache(fun: Callable):
+    @wraps(fun)
+    def __function_cache_wrapper(*args, **kwargs):
+        __fingerprint = fingerprint(fun, *args, **kwargs)
+
+        if cached_result := __setttings_handler.get_mem_cache().get(__fingerprint):
+            result = cached_result["data"]
+        else:
+            result = fun(*args, **kwargs)
+            __setttings_handler.get_mem_cache()[__fingerprint] = {
+                "data": result}
+        
+        return result
+
+    return __function_cache_wrapper
 
 def cache_files(filenames: Iterable[str], **kwargs) -> int:
     """Cache a number of files"""
