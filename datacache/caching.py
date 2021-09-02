@@ -146,7 +146,7 @@ def mem_cache(fun: Callable):
             result = fun(*args, **kwargs)
             __setttings_handler.get_mem_cache()[__fingerprint] = {
                 "data": result}
-        
+
         return result
 
     return __function_cache_wrapper
