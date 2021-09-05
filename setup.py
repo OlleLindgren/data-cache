@@ -1,10 +1,10 @@
 import setuptools
-import os
+from pathlib import Path
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
-with open(os.path.join(__file__, '..', 'requirements.txt'), 'r') as f:
+with open(Path(__file__).parent/'requirements.txt', 'r') as f:
     requirements = [r.strip() for r in f.readlines() if r.strip()]
 
 setuptools.setup(
