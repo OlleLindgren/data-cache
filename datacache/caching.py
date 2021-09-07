@@ -151,6 +151,19 @@ def mem_cache(fun: Callable):
 
     return __function_cache_wrapper
 
+def get_from_mem(*args, **kwargs) -> object:
+    """Retrieve an object from cache"""
+    _fingerprint = fingerprint(*args, **kwargs)
+    if result := __setttings_handler.get_mem_cache().get(_fingerprint, None):
+        return result
+    else:
+        return None
+
+def set_in_mem(obj: object, *args, **kwargs) -> None:
+    """Cache an object"""
+    _fingerprint = fingerprint(*args, **kwargs)
+    __setttings_handler.get_mem_cache()[_fingerprint] = obj
+
 def cache_files(filenames: Iterable[str], **kwargs) -> int:
     """Cache a number of files"""
     n_caches = 0
