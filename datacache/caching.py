@@ -140,7 +140,7 @@ def mem_cache(fun: Callable):
     def __function_cache_wrapper(*args, **kwargs):
         __fingerprint = fingerprint(fun, *args, **kwargs)
 
-        if cached_result := __setttings_handler.get_mem_cache().get(__fingerprint):
+        if cached_result := __setttings_handler.get_mem_cache().get(__fingerprint) is not None:
             result = cached_result["data"]
         else:
             result = fun(*args, **kwargs)
@@ -154,7 +154,7 @@ def mem_cache(fun: Callable):
 def get_from_mem(*args, **kwargs) -> object:
     """Retrieve an object from cache"""
     _fingerprint = fingerprint(*args, **kwargs)
-    if result := __setttings_handler.get_mem_cache().get(_fingerprint, None):
+    if result := __setttings_handler.get_mem_cache().get(_fingerprint, None) is not None:
         return result
     else:
         return None
