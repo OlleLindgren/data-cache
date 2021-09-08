@@ -1,12 +1,13 @@
-from functools import wraps
 import os
+import hashlib
+import base64
+from functools import wraps
 from typing import Callable, Iterable
-import pandas as pd 
 from pathlib import Path
+import pandas as pd 
 from pathvalidate import sanitize_filepath
 
-import time
-HASH_KEY: str = f"__##__{hash(time.time())}__%%__"
+HASH_KEY: str = f"__##__%%__"
 
 class __setttings_handler:
     __cache_root: str = os.getenv('CACHE_ROOT', '.data-cache')
@@ -104,8 +105,8 @@ def fingerprint(*args, **kwargs) -> int:
     _args.extend(kwargs.values())
 
     _args = map(str, _args)
-    result = hash(HASH_KEY.join(_args))
-
+    _args = map(base64.b64decode, _args)
+    result = hashlib.md5(HASH_KEY.join(_args)).hexdigest()
     return result
 
 def mem_read(filename: str, **kwargs) -> pd.DataFrame:
