@@ -105,8 +105,10 @@ def fingerprint(*args, **kwargs) -> int:
     _args.extend(kwargs.values())
 
     _args = map(str, _args)
+    _args = map(lambda arg: arg+'==', _args)
     _args = map(base64.b64decode, _args)
-    result = hashlib.md5(HASH_KEY.join(_args)).hexdigest()
+
+    result = hashlib.md5(base64.b64decode(HASH_KEY).join(_args)).hexdigest()
     return result
 
 def mem_read(filename: str, **kwargs) -> pd.DataFrame:
