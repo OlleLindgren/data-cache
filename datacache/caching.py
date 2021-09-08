@@ -1,13 +1,14 @@
 import os
+import re
 import hashlib
 import base64
-from functools import wraps
+from functools import partial, wraps
 from typing import Callable, Iterable
 from pathlib import Path
 import pandas as pd 
 from pathvalidate import sanitize_filepath
 
-HASH_KEY: str = f"__##__%%__"
+HASH_KEY: str = base64.b64decode("==__##__%%__")
 
 class __setttings_handler:
     __cache_root: str = os.getenv('CACHE_ROOT', '.data-cache')
@@ -105,10 +106,12 @@ def fingerprint(*args, **kwargs) -> int:
     _args.extend(kwargs.values())
 
     _args = map(str, _args)
-    _args = map(lambda arg: arg+'==', _args)
-    _args = map(base64.b64decode, _args)
+    _args = map(lambda arg: arg.replace('/', '__'), _args)
+    _args = map(partial(re.sub, r'\W+', ''), _args)
+    _args = map(partial(bytes, encoding='utf-8'), _args)
+    b64_result = HASH_KEY.join(_args)
 
-    result = hashlib.md5(base64.b64decode(HASH_KEY).join(_args)).hexdigest()
+    result = hashlib.md5(b64_result).hexdigest()
     return result
 
 def mem_read(filename: str, **kwargs) -> pd.DataFrame:
