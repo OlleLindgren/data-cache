@@ -18,7 +18,7 @@ pyarrow
 
 ## Install
 
-`pip install git+https://github.com/OlleLindgren/data-cache@v0.7`
+`pip install git+https://github.com/OlleLindgren/data-cache@main`
 
 ## Usage: As a stand-in for pd.read_csv
 

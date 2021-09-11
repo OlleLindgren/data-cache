@@ -1,14 +1,11 @@
-import os
-import re
 import hashlib
-import base64
-from functools import partial, wraps
-from typing import Callable, Iterable
+import os
+from functools import wraps
 from pathlib import Path
+from typing import Callable, Iterable
+
 import pandas as pd 
 from pathvalidate import sanitize_filepath
-
-HASH_KEY: str = base64.b64decode("==__##__%%__")
 
 class __setttings_handler:
     __cache_root: str = os.getenv('CACHE_ROOT', '.data-cache')
@@ -100,19 +97,20 @@ def read(filename: str, **kwargs) -> pd.DataFrame:
 
 def fingerprint(*args, **kwargs) -> int:
     """Return an integer fingerprint of arguments"""
-
-    _args = list(args)
-    _args.extend(kwargs.keys())
-    _args.extend(kwargs.values())
-
-    _args = map(str, _args)
-    _args = map(lambda arg: arg.replace('/', '__'), _args)
-    _args = map(partial(re.sub, r'\W+', ''), _args)
-    _args = map(partial(bytes, encoding='utf-8'), _args)
-    b64_result = HASH_KEY.join(_args)
-
-    result = hashlib.md5(b64_result).hexdigest()
-    return result
+    import json
+    import dataclasses
+    def jsonify(arg):
+        try:
+            return dataclasses.asdict(arg)
+        except TypeError:
+            return str(arg)
+    return hashlib.md5(json.dumps({
+        "args": list(map(jsonify, args)),
+        "kwargs": {
+            "keys": list(map(jsonify, kwargs.keys())),
+            "values": list(map(jsonify, kwargs.values()))
+        }
+    }).encode('utf-8')).hexdigest()
 
 def mem_read(filename: str, **kwargs) -> pd.DataFrame:
     """Read filename, cache result in memory."""
