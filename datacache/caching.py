@@ -9,6 +9,7 @@ from pathvalidate import sanitize_filepath
 
 class __setttings_handler:
     __cache_root: str = os.getenv('CACHE_ROOT', '.data-cache')
+    __age_tol: int = 0
     @classmethod
     def get_cache_root(cls):
         return os.path.abspath(cls.__cache_root)
@@ -27,9 +28,16 @@ class __setttings_handler:
         """Delete the cache stored in ram"""
         cls.__ram_cache_files = {}
 
+    @classmethod
+    def set_age_diff_tol(cls, seconds=0, days=0, hours=0, minutes=0) -> int:
+        """Set max cache file age tolerance"""
+        cls.age_tol = seconds + 60*(minutes + 60*(hours + 24*days))
+        return cls.age_tol
+
 set_cache_root = __setttings_handler.set_cache_root
 get_cache_root = __setttings_handler.get_cache_root
 clear_memory_cache = __setttings_handler.clear_mem_cache
+set_age_diff_tol = __setttings_handler.set_age_diff_tol
 
 def __get_cache_filepath(filename: str) -> Path:
     """Get the cache location of a file"""
@@ -75,8 +83,8 @@ def read(filename: str, **kwargs) -> pd.DataFrame:
         # Make cache folder
         cache_folder.mkdir(parents=True, exist_ok=True)
 
-    # If file already in feather format, return file.
-    if os.path.isfile(cache_filename):
+    # If file already in feather format, and modification time of underlying file not too old return file.
+    if os.path.isfile(cache_filename) and os.path.getmtime(cache_filename) >= os.path.getmtime(filename):
         return pd.read_feather(cache_filename)
     else:
         # Read csv, write cache, read cache
