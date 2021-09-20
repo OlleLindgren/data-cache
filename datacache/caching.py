@@ -4,6 +4,7 @@ from functools import wraps
 from pathlib import Path
 from typing import Callable, Iterable
 
+from pyarrow.lib import ArrowInvalid
 import pandas as pd 
 from pathvalidate import sanitize_filepath
 
@@ -77,31 +78,37 @@ def read(filename: str, **kwargs) -> pd.DataFrame:
     """Read from cache if exists, otherwise read from csv and create cache"""
 
     cache_filename = __get_cache_filepath(filename)
-    cache_folder = cache_filename.parent
 
-    if not os.path.isdir(cache_folder):
-        # Make cache folder
-        cache_folder.mkdir(parents=True, exist_ok=True)
+    # Ensure filename or cache_filename exists
+    if not Path(filename).exists() and not cache_filename.exists():
+        raise FileNotFoundError(f"Filename '{filename}' does not exist, nothing to read")
+
+    cache_filename.parent.mkdir(parents=True, exist_ok=True)
 
     # If file already in feather format, and modification time of underlying file not too old return file.
-    if os.path.isfile(cache_filename) and os.path.getmtime(cache_filename) >= os.path.getmtime(filename):
-        return pd.read_feather(cache_filename)
-    else:
-        # Read csv, write cache, read cache
-        result = pd.read_csv(filename, **kwargs)
-        expected_shape = result.shape
+    if cache_filename.exists():
+        if not Path(filename).exists() or os.path.getmtime(cache_filename) >= os.path.getmtime(filename):
+            try:
+                return pd.read_feather(cache_filename)
+            except ArrowInvalid:
+                print("WARNING: Found unusable cache file, discarding and re-creating.")
+                cache_filename.unlink()
 
-        result.to_feather(cache_filename)
-        result = pd.read_feather(cache_filename)
+    # Read csv, write cache, read cache
+    result = pd.read_csv(filename, **kwargs)
+    expected_shape = result.shape
 
-        if result.shape != expected_shape:
-            os.remove(expected_shape)
-            assert result.shape == expected_shape, \
-                "DataFrame shape from cache read is different to read_csv: " \
-                f"{result.shape} != {expected_shape}. \n " \
-                f"Caching of {filename} at {cache_filename} failed."
+    result.to_feather(cache_filename)
+    result = pd.read_feather(cache_filename)
 
-        return result
+    if result.shape != expected_shape:
+        cache_filename.unlink()
+        assert result.shape == expected_shape, \
+            "DataFrame shape from cache read is different to read_csv: " \
+            f"{result.shape} != {expected_shape}. \n " \
+            f"Caching of {filename} at failed."
+
+    return result
 
 def fingerprint(*args, **kwargs) -> int:
     """Return an integer fingerprint of arguments"""
