@@ -1,7 +1,5 @@
 """Reduce read times by caching .csv files and other pd.DataFrame data."""
 
-__version__ = version = "0.9.1"
-
 # pylint: disable=redefined-builtin
 from .caching import (
     cache_files,
@@ -16,3 +14,5 @@ from .caching import (
     set_cache_root,
     write,
 )
+
+version = "0.9.1"
