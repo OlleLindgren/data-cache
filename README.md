@@ -16,7 +16,9 @@ pyarrow
 
 ## Install
 
-`pip install git+https://github.com/OlleLindgren/data-cache@main`
+```
+pip install git+https://github.com/OlleLindgren/data-cache@main
+```
 
 ## Usage
 
