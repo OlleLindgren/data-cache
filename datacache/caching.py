@@ -180,7 +180,6 @@ def read(filename: Path, **kwargs) -> pd.DataFrame:
             try:
                 return pd.read_feather(cache_filename)
             except pyarrow.lib.ArrowInvalid:
-                print("WARNING: Found unusable cache file, discarding and re-creating.")
                 cache_filename.unlink()
 
     cache_filename.parent.mkdir(parents=True, exist_ok=True)
