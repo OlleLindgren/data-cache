@@ -13,7 +13,7 @@ import pathvalidate
 import pyarrow
 
 
-class SettingsHandler:  # pylint: disable=too-few-public-methods
+class MutableModuleConstants:  # pylint: disable=too-few-public-methods
     """Internal class that exists only to make the cache root mutable module-wide."""
 
     # TODO there has to be a better way than this pylint: disable=fixme
@@ -32,7 +32,7 @@ def set_cache_root(cache_root: Path) -> None:
     Args:
         cache_root (Path): New cache root
     """
-    SettingsHandler.cache_root = cache_root
+    MutableModuleConstants.cache_root = cache_root
 
 
 def get_cache_root() -> Path:
@@ -41,7 +41,7 @@ def get_cache_root() -> Path:
     Returns:
         Path: The cache root
     """
-    return SettingsHandler.cache_root
+    return MutableModuleConstants.cache_root
 
 
 def set_age_diff_tol(age_diff_tol: datetime.timedelta) -> None:
@@ -52,7 +52,7 @@ def set_age_diff_tol(age_diff_tol: datetime.timedelta) -> None:
     Args:
         age_diff_tol (datetime.timedelta): New max age.
     """
-    SettingsHandler.age_diff_tol = age_diff_tol
+    MutableModuleConstants.age_diff_tol = age_diff_tol
 
 
 def _get_cache_filepath(filename: Path) -> Path:
@@ -143,7 +143,7 @@ def _is_cache_outdated(filename: Path, cache_filename: Path) -> bool:
     """
     cache_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(cache_filename))
     if not filename.exists() and filename != cache_filename:
-        return datetime.datetime.now() - cache_mtime > SettingsHandler.age_tol
+        return datetime.datetime.now() - cache_mtime > MutableModuleConstants.age_tol
 
     file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(filename))
 
