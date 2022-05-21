@@ -155,6 +155,7 @@ def read(filename: Path, **kwargs) -> pd.DataFrame:
 
     Args:
         filename (Path): Filename to read
+        kwargs: Optional keyword arguments to pass to pd.read_csv(). Only used if not cached.
 
     Returns:
         pd.DataFrame: File contents
@@ -206,6 +207,7 @@ def cache_files(filenames: Iterable[str], **kwargs) -> int:
 
     Args:
         filenames (Iterable[str]): Files to cache
+        **kwargs: Optional keyword arguments to pass to pd.read_csv()
 
     Returns:
         int: The number of files that were cached
@@ -228,8 +230,9 @@ def cache_folder(
 
     Args:
         folder (Path): Folder to cache contents of
-        extensions (Iterable[str], optional): Extensions to cache. Defaults to (".tsv", ".csv").
-        recursive (bool, optional): If True (default), recursively traverses the folder.
+        extensions (Iterable[str]): Extensions to cache. Defaults to (".tsv", ".csv").
+        recursive (bool): If True (default), recursively traverses the folder.
+        **kwargs: Optional keyword arguments to pass to pd.read_csv()
 
     Returns:
         int: The number of files that were cached
@@ -258,10 +261,9 @@ def write(dataframe: pd.DataFrame, filename: str, **kwargs) -> None:
     Args:
         dataframe (pd.DataFrame): DataFrame to cache
         filename (str): Filename to cache the dataframe under
+        kwargs: Optional keyword arguments to pass to pd.to_feather()
     """
-    # Figure out filename
     cache_filename = _get_cache_filepath(filename)
-    # If filename parent directory doesn't exist, create it
     cache_filename.parent.mkdir(exist_ok=True, parents=True)
-    # Write cache
+
     dataframe.to_feather(cache_filename, **kwargs)
