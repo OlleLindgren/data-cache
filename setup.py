@@ -3,13 +3,13 @@ from pathlib import Path
 
 src_root = Path(__file__).parent
 
-with open(src_root / "README.md", "r") as fh:
+with open(src_root / "README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
-with open(src_root / 'requirements.txt', 'r') as f:
+with open(src_root / "requirements.txt", "r", encoding="utf-8") as f:
     requirements = [r.strip() for r in f.readlines() if r.strip()]
 
-with open(src_root / '__init__.py', "r") as f:
+with open(src_root / "__init__.py", "r", encoding="utf-8") as f:
     __version_line = next(filter(lambda s: 'version' in s, f.readlines()))
     version = __version_line.split('=')[-1].strip(" \n\"")
 
@@ -29,5 +29,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.6',
+    python_requires='>=3.8',  # Walrus :=
 )

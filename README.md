@@ -6,8 +6,6 @@ Not guaranteed to be stable between versions, and hence not intended for long-te
 
 There is an internal cache root, where cached files are stored (.data-cache by default). View the code example below for how to change that.
 
-It is also possible to cache functions in ram, with the `mem_cache` function/decorator.
-
 ## Dependencies
 
 ```
@@ -56,20 +54,6 @@ This is useful if the same function will be re-called multiple times with the sa
 # this will reload.
 df = cache.mem_read(filename)
 
-# Cache any function in RAM
-df = cache.mem_cache(pd.read_csv)(filename)
-
-import random
-@cache.mem_cache
-def get_random_number(x: float):
-    return random.random() * x
-
-# The same as long as the arguments are the same
-print(get_random_number(1.0))  # x
-print(get_random_number(1.0))  # x
-print(get_random_number(-1.0))  # y
-print(get_random_number(-1.0))  # y
-print(get_random_number(1.0))  # x
 ```
 
 `pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (range) indexes will not work, and column datatypes are restricted to the native C datatypes. For these reasons, it is recommended to fully replace `pd.read_csv()` with `cache.read()`.
