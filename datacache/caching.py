@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import dataclasses
 import datetime
-import functools
 import json
 import os
 from pathlib import Path
