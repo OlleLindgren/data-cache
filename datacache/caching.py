@@ -1,64 +1,83 @@
-import hashlib
+"""Cache csvs or pd.DataFrames"""
+from __future__ import annotations
+
 import os
 from pathlib import Path
 from typing import Iterable
+import json
+import dataclasses
 
-from pyarrow.lib import ArrowInvalid
+
+import pyarrow.lib
 import pandas as pd
 from pathvalidate import sanitize_filepath
 
 
-class __setttings_handler:
-    __cache_root: str = os.getenv('CACHE_ROOT', '.data-cache')
-    __age_tol: int = 0
+class _SettingsHandler:  # pylint: disable=too-few-public-methods
+    """Internal class that exists only to make the cache root mutable module-wide."""
+
+    # TODO there has to be a better way than this pylint: disable=fixme
+
+    __cache_root: str = os.getenv(
+        "CACHE_ROOT",
+        Path.home() / ".cache" / "data_cache" / "cache_root",
+    )
 
     @classmethod
-    def get_cache_root(cls):
-        return os.path.abspath(cls.__cache_root)
+    def _get_cache_root(cls):
+        return cls.__cache_root
 
     @classmethod
-    def set_cache_root(cls, cache_root):
+    def _set_cache_root(cls, cache_root):
         """Set the cache root"""
-        cls.__cache_root = cache_root
+        cls.__cache_root = Path(cache_root).absolute()
 
     @classmethod
-    def set_age_diff_tol(cls, seconds=0, days=0, hours=0, minutes=0) -> int:
+    def _set_age_diff_tol(cls, seconds=0, days=0, hours=0, minutes=0) -> int:
         """Set max cache file age tolerance"""
         cls.age_tol = seconds + 60 * (minutes + 60 * (hours + 24 * days))
         return cls.age_tol
 
 
-set_cache_root = __setttings_handler.set_cache_root
-get_cache_root = __setttings_handler.get_cache_root
-set_age_diff_tol = __setttings_handler.set_age_diff_tol
+# pylint: disable=protected-access
+set_cache_root = _SettingsHandler._set_cache_root
+get_cache_root = _SettingsHandler._get_cache_root
+set_age_diff_tol = _SettingsHandler._set_age_diff_tol
+# pylint: enable=protected-access
 
 
-def __get_cache_filepath(filename: str) -> Path:
+def __get_cache_filepath(filename: Path) -> Path:
     """Get the cache location of a file"""
 
-    basename, _ = os.path.splitext(filename)
-    if os.path.isabs(filename):
-        common_root = os.path.commonpath([get_cache_root(), filename])
+    if Path(filename).is_absolute():
+        common_root = Path(os.path.commonpath([get_cache_root(), filename]))
+        filepath = os.path.relpath(filename, common_root)
     else:
-        common_root = get_cache_root()
+        filepath = filename
 
-    rel_filepath = os.path.relpath(basename + '.feather', start=common_root)
+    cache_path = get_cache_root() / filepath
+    cache_path = cache_path.parent / (cache_path.stem + ".feather")
 
-    result = os.path.join(get_cache_root(), rel_filepath)
-
-    return Path(sanitize_filepath(result, platform='auto'))
+    return Path(sanitize_filepath(cache_path, platform="auto"))
 
 
-def dir(path: str) -> Path:
+def dir(path: Path) -> Path:  # pylint: disable=redefined-builtin
     """Get equivalent directory in cache"""
-    _, filename = os.path.split(path)
 
-    if filename:  # TODO fix; this won't work as intended
-        # If file
-        return __get_cache_filepath(path).parent
+    filepath = __get_cache_filepath(path)
 
-    # If directory
-    return __get_cache_filepath(os.path.join(path, 'tmp')).parent
+    if path.is_file():
+        return filepath.parent
+
+    if path.is_dir():
+        return filepath
+
+    # Path does not exist
+
+    if path.stem and path.suffix:
+        return filepath.parent
+
+    return filepath
 
 
 def file(path: str) -> Path:
@@ -66,35 +85,40 @@ def file(path: str) -> Path:
     return __get_cache_filepath(path)
 
 
-def is_cached(filename: str) -> bool:
+def is_cached(filename: Path) -> bool:
     """Is a filename cached"""
     cache_filename = __get_cache_filepath(filename)
-    return os.path.isfile(cache_filename)
+    return cache_filename.exists()
 
 
-def read(filename: str, **kwargs) -> pd.DataFrame:
+def _is_cache_outdated(filename: Path, cache_filename: Path) -> bool:
+    return os.path.getmtime(filename) > os.path.getmtime(cache_filename)
+
+
+def read(filename: Path, **kwargs) -> pd.DataFrame:
     """Read from cache if exists, otherwise read from csv and create cache"""
+
+    filename = Path(filename)
 
     cache_filename = __get_cache_filepath(filename)
 
     # Ensure filename or cache_filename exists
-    if not Path(filename).exists() and not cache_filename.exists():
+    if not filename.exists() and not cache_filename.exists():
         raise FileNotFoundError(
-            f"Filename '{filename}' does not exist, nothing to read")
+            f"Filename {filename!r} does not exist, nothing to read"
+        )
 
-    cache_filename.parent.mkdir(parents=True, exist_ok=True)
-
-    # If file already in feather format, and modification time of underlying file not too old return file.
     if cache_filename.exists():
-        if not Path(filename).exists() or os.path.getmtime(
-                cache_filename) >= os.path.getmtime(filename):
+        if filename.exists() and _is_cache_outdated(filename, cache_filename):
+            cache_filename.unlink()
+        else:
             try:
                 return pd.read_feather(cache_filename)
-            except ArrowInvalid:
-                print(
-                    "WARNING: Found unusable cache file, discarding and re-creating."
-                )
+            except pyarrow.lib.ArrowInvalid:
+                print("WARNING: Found unusable cache file, discarding and re-creating.")
                 cache_filename.unlink()
+
+    cache_filename.parent.mkdir(parents=True, exist_ok=True)
 
     # Read csv, write cache, read cache
     result = pd.read_csv(filename, **kwargs)
@@ -105,18 +129,18 @@ def read(filename: str, **kwargs) -> pd.DataFrame:
 
     if result.shape != expected_shape:
         cache_filename.unlink()
-        assert result.shape == expected_shape, \
-            "DataFrame shape from cache read is different to read_csv: " \
-            f"{result.shape} != {expected_shape}. \n " \
-            f"Caching of {filename} at failed."
+        if result.shape != expected_shape:
+            raise RuntimeError(
+                "DataFrame shape from cache read is different to read_csv: "
+                f"{result.shape} != {expected_shape}. \n "
+                f"Caching of {filename} at failed."
+            )
 
     return result
 
 
 def fingerprint(*args, **kwargs) -> int:
     """Return an integer fingerprint of arguments"""
-    import json
-    import dataclasses
 
     def jsonify(arg):
         try:
@@ -124,14 +148,17 @@ def fingerprint(*args, **kwargs) -> int:
         except TypeError:
             return str(arg)
 
-    return hashlib.md5(
-        json.dumps({
-            "args": list(map(jsonify, args)),
-            "kwargs": {
-                "keys": list(map(jsonify, kwargs.keys())),
-                "values": list(map(jsonify, kwargs.values()))
+    return hash(
+        json.dumps(
+            {
+                "args": [jsonify(arg) for arg in args],
+                "kwargs": {
+                    "keys": [jsonify(arg) for arg in kwargs],
+                    "values": [jsonify(arg) for arg in kwargs.values()],
+                },
             }
-        }).encode('utf-8')).hexdigest()
+        ).encode("utf-8")
+    )
 
 
 def cache_files(filenames: Iterable[str], **kwargs) -> int:
@@ -144,39 +171,39 @@ def cache_files(filenames: Iterable[str], **kwargs) -> int:
     return n_caches
 
 
-def cache_folder(folder: str,
-                 extensions: Iterable[str] = ('.tsv', '.csv'),
-                 recursive: bool = True,
-                 **kwargs) -> int:
+def cache_folder(
+    folder: Path,
+    extensions: Iterable[str] = (".tsv", ".csv"),
+    recursive: bool = True,
+    **kwargs,
+) -> int:
     """Cache the contents of a folder"""
-    filter = lambda filename: os.path.splitext(filename)[
-        1] in extensions and not is_cached(filename)
+
+    folder = Path(folder)
 
     if recursive:
-
-        def make_recursive_iterator():
-            for root, _, files in os.walk(folder):
-                for f in files:
-                    yield os.path.join(root, f)
-
-        file_iterator = make_recursive_iterator()
+        file_iterator = folder.rglob("*")
     else:
-        file_iterator = (fn for fn in os.listdir(folder) if filter(fn))
+        file_iterator = folder.iterdir()
 
-    filenames = (fn for fn in file_iterator if filter(fn))
+    filenames = (
+        filename
+        for filename in file_iterator
+        if filename.is_file()
+        and filename.suffix in extensions
+        and not is_cached(filename)
+    )
 
     n_caches = cache_files(filenames, **kwargs)
 
     return n_caches
 
 
-def write(df: pd.DataFrame, filename: str, **kwargs) -> None:
+def write(dataframe: pd.DataFrame, filename: str, **kwargs) -> None:
     """Write dataframe to cache."""
     # Figure out filename
     _cache_filename = __get_cache_filepath(filename)
-    _cache_folder = Path(_cache_filename).parent
     # If filename parent directory doesn't exist, create it
-    if not os.path.isdir(_cache_folder):
-        os.makedirs(_cache_folder)
+    _cache_filename.parent.mkdir(exist_ok=True, parents=True)
     # Write cache
-    df.to_feather(_cache_filename, **kwargs)
+    dataframe.to_feather(_cache_filename, **kwargs)

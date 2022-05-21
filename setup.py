@@ -29,5 +29,5 @@ setuptools.setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    python_requires='>=3.8',  # Walrus :=
+    python_requires='>=3.8',  # Walrus :=, from __future__ import annotations
 )
