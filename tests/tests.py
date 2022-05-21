@@ -57,6 +57,10 @@ def test_stuff():
     # Delete cache folder if it did not exist before
     shutil.rmtree(__TMP_CACHE)
 
+    assert cache.fingerprint(1, 2.2, "asdf", q={3: [1, 2, shutil.rmtree]}) == cache.fingerprint(1, 2.2, "asdf", q={3: [1, 2, shutil.rmtree]})
+    assert cache.fingerprint(1, 2.2, "asdf", q={3: [1, 2, shutil.rmtree]}) != cache.fingerprint(1, 2.2, "asdf", k={3: [1, 2, shutil.rmtree]})
+    print("[X] Fingerprint ok.")
+
     print()
     print("[X] All tests passed.")
 

@@ -1,12 +1,11 @@
 """Cache csvs or pd.DataFrames."""
 from __future__ import annotations
 
-import dataclasses
 import datetime
-import json
+import itertools
 import os
 from pathlib import Path
-from typing import Iterable
+from typing import Any, Iterable
 
 import pandas as pd
 import pathvalidate
@@ -64,14 +63,15 @@ def _get_cache_filepath(filename: Path) -> Path:
     Returns:
         Path: Cache location of file
     """
-    if Path(filename).is_absolute():
+    filename = Path(filename)
+    if filename.is_absolute():
         common_root = Path(os.path.commonpath([get_cache_root(), filename]))
         filepath = os.path.relpath(filename, common_root)
     else:
         filepath = filename
 
     cache_path = get_cache_root() / filepath
-    cache_path = cache_path.parent / (cache_path.stem + ".feather")
+    cache_path = cache_path.parent / f"{cache_path.stem}.feather"
 
     return pathvalidate.sanitize_filepath(cache_path, platform="auto")
 
@@ -156,10 +156,6 @@ def read(filename: Path, **kwargs) -> pd.DataFrame:
     Args:
         filename (Path): Filename to read
 
-    Raises:
-        FileNotFoundError: If filename does not exist, and cache equivalent does not exist
-        RuntimeError: If attempted to cache non-cached file, but failed.
-
     Returns:
         pd.DataFrame: File contents
     """
@@ -167,14 +163,8 @@ def read(filename: Path, **kwargs) -> pd.DataFrame:
 
     cache_filename = _get_cache_filepath(filename)
 
-    # Ensure filename or cache_filename exists
-    if not filename.exists() and not cache_filename.exists():
-        raise FileNotFoundError(
-            f"Filename {filename!r} does not exist, nothing to read"
-        )
-
     if cache_filename.exists():
-        if filename.exists() and _is_cache_outdated(filename, cache_filename):
+        if _is_cache_outdated(filename, cache_filename):
             cache_filename.unlink()
         else:
             try:
@@ -182,25 +172,19 @@ def read(filename: Path, **kwargs) -> pd.DataFrame:
             except pyarrow.lib.ArrowInvalid:
                 cache_filename.unlink()
 
-    cache_filename.parent.mkdir(parents=True, exist_ok=True)
-
-    # Read csv, write cache, read cache
     dataframe = pd.read_csv(filename, **kwargs)
-    expected_shape = dataframe.shape
 
+    cache_filename.parent.mkdir(parents=True, exist_ok=True)
     dataframe.to_feather(cache_filename)
-    dataframe = pd.read_feather(cache_filename)
 
-    if dataframe.shape != expected_shape:
-        cache_filename.unlink()
-        if dataframe.shape != expected_shape:
-            raise RuntimeError(
-                "DataFrame shape from cache read is different to read_csv: "
-                f"{dataframe.shape} != {expected_shape}. \n "
-                f"Caching of {filename} at failed."
-            )
+    return pd.read_feather(cache_filename)
 
-    return dataframe
+
+def _hash_anything(arg: Any) -> int:
+    try:
+        return hash(arg)
+    except TypeError:
+        return hash(repr(arg))
 
 
 def fingerprint(*args, **kwargs) -> int:
@@ -209,24 +193,12 @@ def fingerprint(*args, **kwargs) -> int:
     Returns:
         int: A unique fingerprint corresponding to the provided arguments
     """
-
-    def jsonify(arg):
-        try:
-            return dataclasses.asdict(arg)
-        except TypeError:
-            return str(arg)
-
-    return hash(
-        json.dumps(
-            {
-                "args": [jsonify(arg) for arg in args],
-                "kwargs": {
-                    "keys": [jsonify(arg) for arg in kwargs],
-                    "values": [jsonify(arg) for arg in kwargs.values()],
-                },
-            },
-        ).encode("utf-8")
+    argument_iterator = itertools.chain(
+        args,
+        kwargs.keys(),
+        kwargs.values(),
     )
+    return hash(tuple(_hash_anything(argument) for argument in argument_iterator))
 
 
 def cache_files(filenames: Iterable[str], **kwargs) -> int:
