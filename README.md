@@ -46,4 +46,4 @@ df = cache.read(filename)
 cache.write(df, filename)
 ```
 
-`pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (non-range) indexes will not work, and column datatypes are restricted to the native C datatypes. For these reasons, it works very well to replace `pd.read_csv()` with `cache.read()`, while replacing intermediary pd.DataFrame objects may be trickier.
+`pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (non-range) indexes will not work, and column datatypes are restricted to the native C datatypes. For these reasons, it works very well to replace `pd.read_csv()` with `cache.read()`, while caching intermediary pd.DataFrame objects is often trickier.
