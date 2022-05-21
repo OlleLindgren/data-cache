@@ -1,6 +1,6 @@
 # data-cache
 
-Repository with a few small helper functions for caching .csv files in the binary .feather format, making load times much faster (usually around 10x compared to .csv) on subsequent runs.  
+Repository with a few small helper functions for caching .csv files in the binary .feather format, making load times much faster (typically an order of magnitude) on subsequent runs. 
 
 Not guaranteed to be stable between versions, and hence not intended for long-term storage.
 
@@ -18,7 +18,7 @@ pyarrow
 
 `pip install git+https://github.com/OlleLindgren/data-cache@main`
 
-## Usage: As a stand-in for pd.read_csv
+## Usage
 
 This is useful when the same .csv file will be loaded multiple times, across different Python sessions.
 
@@ -44,4 +44,4 @@ df = cache.read(filename)
 cache.write(df, filename)
 ```
 
-`pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (range) indexes will not work, and column datatypes are restricted to the native C datatypes. For these reasons, it is recommended to fully replace `pd.read_csv()` with `cache.read()`.
+`pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (non-range) indexes will not work, and column datatypes are restricted to the native C datatypes. For these reasons, it works very well to replace `pd.read_csv()` with `cache.read()`, while replacing intermediary pd.DataFrame objects may be trickier.
