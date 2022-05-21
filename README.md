@@ -4,7 +4,7 @@ Repository with a few small helper functions for caching .csv files in the binar
 
 Not guaranteed to be stable between versions, and hence not intended for long-term storage.
 
-There is an internal cache root, where cached files are stored (.data-cache by default). View the code example below for how to change that.
+There is an internal cache root, where cached files are stored (~/.cache/data_cache/cache_root by default). View the code example below for how to change that.
 
 ## Dependencies
 
@@ -42,18 +42,6 @@ df = cache.read(filename)
 
 # Write df (pd.DataFrame) to cache
 cache.write(df, filename)
-```
-
-## Usage: Caching to RAM
-
-This is useful if the same function will be re-called multiple times with the same arguments.
-
-```python
-# Same as cache.read, but caches the result in RAM.
-# If the underlying .feather object updates (gets a different modification time),
-# this will reload.
-df = cache.mem_read(filename)
-
 ```
 
 `pandas.to_feather` is used under the hood, which introduces certain requirements on what files may be cached. Non-default (range) indexes will not work, and column datatypes are restricted to the native C datatypes. For these reasons, it is recommended to fully replace `pd.read_csv()` with `cache.read()`.
